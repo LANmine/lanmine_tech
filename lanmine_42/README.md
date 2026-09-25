@@ -44,3 +44,44 @@ graph TD
   edge-sw1..n ---|40m LC/LC| core-sw1
   edge-sw1..n ---|40m LC/LC| core-sw2
 ```
+## Strømplan
+
+
+```mermaid
+flowchart LR
+
+    MP[Main PSU]
+
+    subgraph Scene
+        SC[Core switch]
+        
+        SKA[Kurs A]
+        SKA --> SC
+
+        SKB[Kurs B]
+        SKB --> SC
+    end
+
+    subgraph Tribune
+        TC[Core switch]
+
+        TKA[Kurs A]
+        TKA --> TC
+
+        TKB[Kurs B]
+        TKB --> TC
+    end
+
+    subgraph Hall
+        HS[Switch]
+        HK[Kurs]
+        HK --> HS
+    end
+
+    MP --> SKA
+    MP --> SKB
+    MP --> TKA
+    MP --> TKB
+    MP --> HK
+
+```
