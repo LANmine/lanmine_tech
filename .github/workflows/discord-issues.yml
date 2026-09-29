@@ -1,0 +1,94 @@
+name: Discord — issue notifications
+
+on:
+  issues:
+    types: [opened, closed, reopened, assigned, labeled]
+  issue_comment:
+    types: [created]
+
+jobs:
+  notify:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Post to Discord
+        env:
+          WEBHOOK: ${{ secrets.DISCORD_WEBHOOK_URL }}
+          EVENT: ${{ github.event_name }}
+          ACTION: ${{ github.event.action }}
+          ISSUE_TITLE: ${{ github.event.issue.title }}
+          ISSUE_NUMBER: ${{ github.event.issue.number }}
+          ISSUE_URL: ${{ github.event.issue.html_url }}
+          ISSUE_USER: ${{ github.event.issue.user.login }}
+          COMMENT_USER: ${{ github.event.comment.user.login }}
+          COMMENT_BODY: ${{ github.event.comment.body }}
+          COMMENT_URL: ${{ github.event.comment.html_url }}
+          ASSIGNEE: ${{ github.event.assignee.login }}
+          LABEL: ${{ github.event.label.name }}
+          REPO: ${{ github.repository }}
+        run: |
+          python3 - <<'EOF'
+          import os, json, urllib.request
+
+          webhook = os.environ["WEBHOOK"]
+          action  = os.environ["ACTION"]
+          event   = os.environ["EVENT"]
+          num     = os.environ["ISSUE_NUMBER"]
+          title   = os.environ["ISSUE_TITLE"]
+          url     = os.environ["ISSUE_URL"]
+          repo    = os.environ["REPO"]
+
+          emojis = {
+            "opened":   "🆕", "closed":   "✅", "reopened": "🔄",
+            "assigned": "👤", "labeled":  "🏷️",  "created":  "💬",
+          }
+          emoji = emojis.get(action, "📋")
+
+          if event == "issue_comment":
+            actor = os.environ["COMMENT_USER"]
+            body  = os.environ["COMMENT_BODY"][:200] + ("…" if len(os.environ["COMMENT_BODY"]) > 200 else "")
+            desc  = f"**{actor}** kommenterte:\n> {body}"
+            link  = os.environ["COMMENT_URL"]
+          elif action == "assigned":
+            actor = os.environ["ISSUE_USER"]
+            desc  = f"Tildelt til **{os.environ['ASSIGNEE']}**"
+            link  = url
+          elif action == "labeled":
+            actor = os.environ["ISSUE_USER"]
+            desc  = f"Merket med **{os.environ['LABEL']}**"
+            link  = url
+          elif action == "opened":
+            actor = os.environ["ISSUE_USER"]
+            desc  = f"**{actor}** åpnet issue"
+            link  = url
+          elif action == "closed":
+            actor = os.environ["ISSUE_USER"]
+            desc  = f"Issue lukket"
+            link  = url
+          elif action == "reopened":
+            actor = os.environ["ISSUE_USER"]
+            desc  = f"Issue gjenåpnet"
+            link  = url
+          else:
+            actor = os.environ["ISSUE_USER"]
+            desc  = action
+            link  = url
+
+          payload = {
+            "embeds": [{
+              "title":       f"{emoji} #{num} — {title}",
+              "description": desc,
+              "url":         link,
+              "color":       0xEE982B,
+              "footer":      {"text": repo},
+            }]
+          }
+
+          req = urllib.request.Request(
+            webhook,
+            data=json.dumps(payload).encode(),
+            headers={"Content-Type": "application/json"},
+            method="POST",
+          )
+          with urllib.request.urlopen(req, timeout=10) as r:
+            print(f"Discord: {r.status}")
+          EOF
