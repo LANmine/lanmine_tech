@@ -1,10 +1,11 @@
 name: Discord — issue notifications
 
-on:
-  issues:
-    types: [opened, closed, reopened, assigned, labeled]
-  issue_comment:
-    types: [created]
+# Disabled: LAN event over
+# on:
+#   issues:
+#     types: [opened, closed, reopened, assigned, labeled]
+#   issue_comment:
+#     types: [created]
 
 jobs:
   notify:
